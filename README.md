@@ -1,2 +1,4 @@
-# Youtube Channel to Email Scraper
+# Youtube Channel to Email Scraper aka Youtube Notifier
+
+- does not need to connect to youtube
 
