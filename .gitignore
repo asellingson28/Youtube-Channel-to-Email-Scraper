@@ -1,0 +1,23 @@
+# Sensitive config files
+config.json
+
+# Channel list (optional; keep if you prefer privacy)
+channels.json
+
+# SQLite database
+*.db
+
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# VSCode settings (optional)
+.vscode/
+
+# Environment files
+.env
+.venv/
+venv/
