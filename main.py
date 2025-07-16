@@ -8,9 +8,11 @@ from email.mime.text import MIMEText
 from xml.etree import ElementTree as ET
 
 # === Load Config ===
-with open('config.json') as f:
-    config = json.load(f)
-
+try:
+    with open('config.json') as f:
+        config = json.load(f)
+except FileNotFoundError:
+    print("⚠️Make sure you rename your template file!")
 with open('channels.json') as f:
     channels = json.load(f)
 
@@ -45,7 +47,6 @@ def send_email(subject, html_body):
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 
-# === YouTube feed fetch ===
 def fetch_latest(channel_id):
     url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
     try:
@@ -56,18 +57,31 @@ def fetch_latest(channel_id):
             'yt': 'http://www.youtube.com/xml/schemas/2015',
             'atom': 'http://www.w3.org/2005/Atom'
         }
-        entry = root.find('atom:entry', ns)
-        if entry is None:
-            return None
-        return {
-            'video_id': entry.find('yt:videoId', ns).text,
-            'title': entry.find('atom:title', ns).text,
-            'published': entry.find('atom:published', ns).text,
-            'link': entry.find('atom:link', ns).attrib['href']
-        }
+        # Grab *all* entries, not just the first one
+        entries = root.findall('atom:entry', ns)
+        for entry in entries:
+            link = entry.find('atom:link', ns).attrib['href']
+            # if it's a Short, skip it and keep looking
+            if "/shorts/" in link:
+                print(f"🚫 Skipped Short: {link}")
+                continue
+
+            # otherwise return this first non-Short
+            return {
+                'video_id': entry.find('yt:videoId', ns).text,
+                'title': entry.find('atom:title', ns).text,
+                'published': entry.find('atom:published', ns).text,
+                'link': link
+            }
+
+        # if we fell out of the loop, everything was shorts (or no videos)
+        print("ℹ️ No non-Short videos found in feed.")
+        return None
+
     except Exception as e:
         print(f"❌ Error fetching feed for channel {channel_id}: {e}")
         return None
+
 
 # === Check all channels ===
 def check_channels():

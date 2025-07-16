@@ -1,14 +1,21 @@
 import json
+import os
 import requests
 import re
 from bs4 import BeautifulSoup
 
+
 def extract_channel_id(url_or_handle):
+    """
+    Extracts a YouTube channel ID from a handle (@handle),
+    a full channel URL, or a handle URL.
+    Returns None if it cannot be determined.
+    """
+    # Determine URL to fetch
     if url_or_handle.startswith("@"):
-        handle = url_or_handle
-        url = f"https://www.youtube.com/{handle}"
+        url = f"https://www.youtube.com/{url_or_handle}"
     elif "youtube.com/" in url_or_handle and "/channel/" in url_or_handle:
-        # already a direct channel link
+        # Already a direct channel link
         return url_or_handle.split("/channel/")[1].split("/")[0]
     elif "youtube.com/" in url_or_handle and "/@" in url_or_handle:
         url = url_or_handle
@@ -18,17 +25,41 @@ def extract_channel_id(url_or_handle):
 
     try:
         resp = requests.get(url)
+        resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
-        for tag in soup.find_all("link", {"rel": "canonical"}):
-            match = re.search(r"/channel/([a-zA-Z0-9_-]+)", tag.get("href", ""))
+        # Look for the canonical link tag to find the /channel/{ID}
+        canonical = soup.find("link", {"rel": "canonical"})
+        if canonical and 'href' in canonical.attrs:
+            match = re.search(r"/channel/([a-zA-Z0-9_-]+)", canonical['href'])
             if match:
                 return match.group(1)
     except Exception as e:
-        print(f"⚠️ Error trying to fetch or parse the URL: {e}")
+        print(f"⚠️ Error fetching URL: {e}")
 
     return None
 
+
+def load_channels():
+    """Loads existing channels.json or returns empty list if not found/invalid."""
+    if not os.path.exists("channels.json"):
+        return []
+    try:
+        with open("channels.json", "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        print("⚠️ channels.json is invalid JSON. Starting fresh.")
+        return []
+
+
+def save_channels(channels):
+    """Writes the channels list back to channels.json."""
+    with open("channels.json", "w") as f:
+        json.dump(channels, f, indent=2)
+
+
 def add_channel():
+    channels = load_channels()
+
     while True:
         user_input = input("Paste YouTube handle or URL (e.g. @veritasium or full URL): ").strip()
         name = input("What should we call this channel? (e.g. Veritasium): ").strip()
@@ -40,22 +71,15 @@ def add_channel():
                 return
             continue
 
-        try:
-            with open("channels.json", "r") as f:
-                channels = json.load(f)
-        except FileNotFoundError:
-            channels = []
-
         if any(ch['id'] == channel_id for ch in channels):
             print("⚠️ That channel already exists.")
             return
 
         channels.append({"id": channel_id, "name": name})
-        with open("channels.json", "w") as f:
-            json.dump(channels, f, indent=2)
-
+        save_channels(channels)
         print(f"✅ Channel added: {name} ({channel_id})")
         break
+
 
 if __name__ == "__main__":
     add_channel()

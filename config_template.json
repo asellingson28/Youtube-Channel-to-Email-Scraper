@@ -1,0 +1,12 @@
+{
+  "email": {
+    "from": "youremailhere@example.com", 
+    "to": "youremailhere@example.com",
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "username": "youremailhere@example.com",
+    "password": "your_app_password"
+  },
+  "database": "youtube.db",
+  "poll_interval_minutes": 15
+}
